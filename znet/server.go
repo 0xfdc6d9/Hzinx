@@ -2,6 +2,7 @@ package znet
 
 import (
 	"Hzinx/ziface"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -11,6 +12,18 @@ type Server struct {
 	IPVersion string // 服务器绑定的IP版本
 	IP        string // 服务器监听的IP
 	Port      int    // 服务器监听的Port
+}
+
+// CallBack2Client 定义当前客户端链接所绑定的handleAPI
+// 先写死一个方法，后面再交由用户自定义
+func CallBack2Client(conn *net.TCPConn, data []byte, cnt int) error {
+	// 回显业务
+	fmt.Println("[Conn Handle] CallBack2Client...")
+	if _, err := conn.Write(data[:cnt]); err != nil {
+		fmt.Println("conn.Write() occurs an error:", err)
+		return errors.New("CallBack2Client error")
+	}
+	return nil
 }
 
 func (s *Server) Start() {
@@ -28,33 +41,21 @@ func (s *Server) Start() {
 		return
 	}
 	fmt.Println("start Zinx server  ", s.Name, " success, now listening...")
+	var cid uint32
 
 	for {
-		conn, err := listener.Accept()
+		conn, err := listener.AcceptTCP()
 		if err != nil {
-			fmt.Println("listener.Accept() occurs an error: ", err)
+			fmt.Println("listener.AcceptTCP() occurs an error: ", err)
 			continue
 		}
 
-		go func() {
-			for {
+		// 将处理新链接的业务方法和conn进行绑定，得到我们的链接模块
+		dealConn := NewConnection(conn, cid, CallBack2Client)
+		cid++
 
-				buf := make([]byte, 1024)
-				cnt, err := conn.Read(buf)
-				if err != nil {
-					fmt.Println("conn.Read() occurs an error: ", err)
-					continue
-				}
-				if cnt == 0 {
-					continue
-				}
-
-				if _, err := conn.Write(buf); err != nil {
-					fmt.Println("conn.Write() occurs an error: ", err)
-					continue
-				}
-			}
-		}()
+		// 启动当前的链接业务处理
+		go dealConn.Start()
 	}
 }
 
