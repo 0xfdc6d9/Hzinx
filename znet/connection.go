@@ -7,35 +7,35 @@ import (
 )
 
 type Connection struct {
-	// 当前链接的socket TCP套接字
+	// 当前连接的socket TCP套接字
 	Conn *net.TCPConn
 
-	// 链接的ID
+	// 连接的ID
 	ConnID uint32
 
-	// 当前的链接状态
+	// 当前的连接状态
 	isClosed bool
 
-	// 当前链接所绑定的处理业务方法API（将一个链接绑定一个业务）
-	handleAPI ziface.HandleFunc
-
-	// 告知当前链接已经退出的/停止 channel
+	// 告知当前连接已经退出的/停止 channel
 	ExitChan chan bool
+
+	// 当前连接处理的方法Router
+	Router ziface.IRouter
 }
 
-func NewConnection(conn *net.TCPConn, connID uint32, callbackApi ziface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, router ziface.IRouter) *Connection {
 	c := &Connection{
-		Conn:      conn,
-		ConnID:    connID,
-		isClosed:  false,
-		handleAPI: callbackApi,
-		ExitChan:  make(chan bool, 1),
+		Conn:     conn,
+		ConnID:   connID,
+		isClosed: false,
+		Router:   router,
+		ExitChan: make(chan bool, 1),
 	}
 
 	return c
 }
 
-// StartReader 链接的读业务方法
+// StartReader 连接的读业务方法
 func (c *Connection) StartReader() {
 	fmt.Println("Reader Goroutine is running...")
 	defer c.Stop()
@@ -44,37 +44,41 @@ func (c *Connection) StartReader() {
 	for {
 		// 读取客户端的数据到buf中
 		buf := make([]byte, 512)
-		cnt, err := c.Conn.Read(buf)
+		_, err := c.Conn.Read(buf)
 		if err != nil {
 			fmt.Println("c.Conn.Read() occurs an error:", err)
-			continue
-		}
-
-		// 调用当前链接所绑定的HandleAPI
-		if err := c.handleAPI(c.Conn, buf, cnt); err != nil {
-			fmt.Println("ConnId", c.ConnID, "handle is error:", err)
 			break
 		}
+
+		// 得到当前conn数据的Request请求数据
+		req := &Request{
+			conn: c,
+			data: buf,
+		}
+		// 从路由中找到注册绑定的Conn对应的router调用
+		c.Router.PreHandle(req)
+		c.Router.Handle(req)
+		c.Router.PostHandle(req)
 	}
 }
 
 func (c *Connection) Start() {
 	fmt.Println("Conn Start()... ConnID =", c.ConnID)
 
-	// 启动从当前链接读数据的业务
+	// 启动从当前连接读数据的业务
 	go c.StartReader()
-	// TODO 启动从当前链接写数据的业务
+	// TODO 启动从当前连接写数据的业务
 }
 
 func (c *Connection) Stop() {
 	fmt.Println("Conn stop()... ConnID =", c.ConnID)
 
-	if c.isClosed { // 如果链接已经关闭
+	if c.isClosed { // 如果连接已经关闭
 		return
 	}
 	c.isClosed = true
 
-	c.Conn.Close() // 关闭socket链接
+	c.Conn.Close() // 关闭socket连接
 	close(c.ExitChan)
 }
 

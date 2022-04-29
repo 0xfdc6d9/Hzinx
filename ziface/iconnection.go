@@ -3,16 +3,16 @@ package ziface
 import "net"
 
 type IConnection interface {
-	// Start 启动链接，让当前的链接准备开始工作
+	// Start 启动连接，让当前的连接准备开始工作
 	Start()
 
-	// Stop 停止链接 结束当前链接的工作
+	// Stop 停止连接 结束当前连接的工作
 	Stop()
 
-	// GetTCPConnection 获取当前链接的绑定 socket conn
+	// GetTCPConnection 获取当前连接的绑定 socket conn
 	GetTCPConnection() *net.TCPConn
 
-	// GetConnID 获取当前链接模块的链接ID
+	// GetConnID 获取当前连接模块的连接ID
 	GetConnID() uint32
 
 	// RemoteAddr 获取远程客户端的 TCP状态 IP:Port
@@ -22,5 +22,5 @@ type IConnection interface {
 	Send(data []byte) error
 }
 
-// HandleFunc 定义一个处理链接业务的方法
+// HandleFunc 定义一个处理连接业务的方法
 type HandleFunc func(*net.TCPConn, []byte, int) error
