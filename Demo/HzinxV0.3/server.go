@@ -40,10 +40,10 @@ func (p *PingRouter) PostHandle(request ziface.IRequest) {
 }
 
 func main() {
-	// 创建一个server句柄，使用HZinx的API
+	// 创建一个server句柄，使用Hzinx的API
 	s := znet.NewServer("[Hzinx V0.3]")
 
-	// 给当前HZinx框架添加一个自定义的router
+	// 给当前Hzinx框架添加一个自定义的router
 	s.AddRouter(&PingRouter{})
 
 	// 启动server

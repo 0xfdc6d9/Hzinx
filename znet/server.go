@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"Hzinx/utils"
 	"Hzinx/ziface"
 	"fmt"
 	"net"
@@ -15,26 +16,29 @@ type Server struct {
 }
 
 func (s *Server) Start() {
-	fmt.Printf("[START] Server name: %s,listenner at IP: %s, Port %d is starting\n", s.Name, s.IP, s.Port)
+	fmt.Printf("[Hzinx] Server name: %s, listener at IP: %s, Port: %d is starting\n",
+		utils.GlobalObject.Name, utils.GlobalObject.Host, utils.GlobalObject.TCPPort)
+	fmt.Printf("[Hzinx] Version %s, MaxConn: %d, MaxPackageSize: %d\n",
+		utils.GlobalObject.Version, utils.GlobalObject.MaxConn, utils.GlobalObject.MaxPackageSize)
 
 	addr, err := net.ResolveTCPAddr("", fmt.Sprintf("%s:%d", s.IP, s.Port))
 	if err != nil {
-		fmt.Println("net.ResolveTCPAddr() occurs an error: ", err)
+		fmt.Println("net.ResolveTCPAddr() occurs an error:", err)
 		return
 	}
 
 	listener, err := net.ListenTCP(s.IPVersion, addr)
 	if err != nil {
-		fmt.Println("net.ListenTCP() occurs an error: ", err)
+		fmt.Println("net.ListenTCP() occurs an error:", err)
 		return
 	}
-	fmt.Println("start Zinx server  ", s.Name, " success, now listening...")
+	fmt.Println("start Hzinx server", s.Name, "success, now listening...")
 	var cid uint32
 
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
-			fmt.Println("listener.AcceptTCP() occurs an error: ", err)
+			fmt.Println("listener.AcceptTCP() occurs an error:", err)
 			continue
 		}
 
@@ -71,10 +75,10 @@ func (s *Server) AddRouter(router ziface.IRouter) {
 
 func NewServer(name string) ziface.IServer {
 	s := &Server{
-		Name:      name,
+		Name:      utils.GlobalObject.Name,
 		IPVersion: "tcp4",
-		IP:        "0.0.0.0",
-		Port:      8999,
+		IP:        utils.GlobalObject.Host,
+		Port:      utils.GlobalObject.TCPPort,
 		Router:    nil,
 	}
 
