@@ -18,7 +18,7 @@ func main() {
 	}
 
 	for {
-		_, err := conn.Write([]byte("Hello Hzinx V0.2..."))
+		_, err := conn.Write([]byte("Hello Hzinx V0.4..."))
 		if err != nil {
 			fmt.Println("conn.Write() occurs an error: ", err)
 			continue
