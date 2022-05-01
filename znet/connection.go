@@ -18,11 +18,14 @@ type Connection struct {
 	// 当前的连接状态
 	isClosed bool
 
-	// 告知当前连接已经退出的/停止 channel
+	// 告知当前连接已经退出的/停止 channel（由Reader告知Writer退出）
 	ExitChan chan bool
 
 	// 消息管理的MsgID 和对应的处理业务的API
 	MsgHandler ziface.IMsgHandler
+
+	// 无缓冲管道，用于读、写Goroutine之间通信
+	msgChan chan []byte
 }
 
 func NewConnection(conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandler) *Connection {
@@ -32,6 +35,7 @@ func NewConnection(conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandl
 		isClosed:   false,
 		MsgHandler: msgHandler,
 		ExitChan:   make(chan bool, 1),
+		msgChan:    make(chan []byte),
 	}
 
 	return c
@@ -39,9 +43,9 @@ func NewConnection(conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandl
 
 // StartReader 连接的读业务方法
 func (c *Connection) StartReader() {
-	fmt.Println("Reader Goroutine is running...")
+	fmt.Println("[Reader Goroutine is running]")
 	defer c.Stop()
-	defer fmt.Println("connID =", c.ConnID, "Reader is exit, remote addr is", c.RemoteAddr().String())
+	defer fmt.Println("[Reader is exit], connID =", c.ConnID, "remote addr is", c.RemoteAddr().String())
 
 	for {
 		// 读取客户端的数据到buf中
@@ -107,13 +111,30 @@ func (c *Connection) SendMsg(msgID uint32, data []byte) error {
 		return errors.New("pack error msg")
 	}
 
-	// 将数据发送给客户端
-	if _, err := c.Conn.Write(binaryMsg); err != nil {
-		fmt.Println("Write msg id =", msgID, "error:", err)
-		return errors.New("conn Write error")
-	}
+	// 将数据交给Writer发送给客户端
+	c.msgChan <- binaryMsg
 
 	return nil
+}
+
+// StartWriter 给客户端发送消息
+func (c *Connection) StartWriter() {
+	fmt.Println("[Writer Goroutine is running]")
+	defer fmt.Println("[conn Writer exit!]", c.RemoteAddr().String())
+
+	// 循环等待channel消息
+	for {
+		select {
+		case data := <-c.msgChan:
+			if _, err := c.Conn.Write(data); err != nil {
+				fmt.Println("send data error:", err)
+				return
+			}
+		case <-c.ExitChan:
+			// 代表Reader已经退出，此时Writer也需要退出
+			return
+		}
+	}
 }
 
 func (c *Connection) Start() {
@@ -121,7 +142,8 @@ func (c *Connection) Start() {
 
 	// 启动从当前连接读数据的业务
 	go c.StartReader()
-	// TODO 启动从当前连接写数据的业务
+	// 启动从当前连接写数据的业务
+	go c.StartWriter()
 }
 
 func (c *Connection) Stop() {
@@ -135,6 +157,11 @@ func (c *Connection) Stop() {
 	if err := c.Conn.Close(); err != nil {
 		return
 	} // 关闭socket连接
+
+	// 告知Writer关闭
+	c.ExitChan <- true
+
+	close(c.msgChan)
 	close(c.ExitChan)
 }
 
