@@ -21,6 +21,9 @@ func (s *Server) Start() {
 	fmt.Printf("[Hzinx] Version %s, MaxConn: %d, MaxPackageSize: %d\n",
 		utils.GlobalObject.Version, utils.GlobalObject.MaxConn, utils.GlobalObject.MaxPackageSize)
 
+	// 开启消息队列及Worker工作池
+	s.MsgHandler.StartWorkerPool()
+
 	addr, err := net.ResolveTCPAddr("", fmt.Sprintf("%s:%d", s.IP, s.Port))
 	if err != nil {
 		fmt.Println("net.ResolveTCPAddr() occurs an error:", err)

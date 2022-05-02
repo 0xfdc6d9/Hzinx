@@ -1,6 +1,7 @@
 package znet
 
 import (
+	"Hzinx/utils"
 	"Hzinx/ziface"
 	"errors"
 	"fmt"
@@ -89,10 +90,14 @@ func (c *Connection) StartReader() {
 			conn: c,
 			msg:  msg,
 		}
-
-		// 从路由中找到注册绑定的Conn对应的router调用
-		// 根据绑定好的MsgID找到对应的API执行
-		go c.MsgHandler.DoMsgHandler(req)
+		if utils.GlobalObject.WorkerPoolSize > 0 {
+			//已经开启了工作池机制，将消息发送给Worker工作池处理即可
+			c.MsgHandler.SendMsg2TaskQueue(req)
+		} else {
+			// 从路由中找到注册绑定的Conn对应的router调用
+			// 根据绑定好的MsgID找到对应的API执行
+			go c.MsgHandler.DoMsgHandler(req)
+		}
 	}
 }
 

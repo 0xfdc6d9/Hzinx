@@ -22,9 +22,11 @@ type GlobalObj struct {
 	/*
 		Hzinx
 	*/
-	Version        string // 当前Hzinx的版本号
-	MaxConn        int    // 当前服务器主机允许的最大连接数
-	MaxPackageSize uint32 // 当前Hzinx框架数据包的最大值
+	Version          string // 当前Hzinx的版本号
+	MaxConn          int    // 当前服务器主机允许的最大连接数
+	MaxPackageSize   uint32 // 当前Hzinx框架数据包的最大值
+	WorkerPoolSize   uint32 // 当前业务工作Worker池的Goroutine数量
+	MaxWorkerTaskLen uint32 // 每个worker对应的消息队列的任务的数量最大值
 }
 
 // GlobalObject 定义一个全局的对外GlobalOb对象
@@ -46,13 +48,15 @@ func (g *GlobalObj) Reload() {
 // 初始化GlobalObject
 func init() {
 	GlobalObject = &GlobalObj{
-		TCPServer:      nil,
-		Host:           "0.0.0.0",
-		TCPPort:        8999,
-		Name:           "HzinxServerAPP",
-		Version:        "V0.7",
-		MaxConn:        1000,
-		MaxPackageSize: 4096,
+		TCPServer:        nil,
+		Host:             "0.0.0.0",
+		TCPPort:          8999,
+		Name:             "HzinxServerAPP",
+		Version:          "V0.8",
+		MaxConn:          1000,
+		MaxPackageSize:   4096,
+		WorkerPoolSize:   10,
+		MaxWorkerTaskLen: 1024,
 	}
 
 	// 尝试从conf/Hzinx.json 加载用户自定义的参数
