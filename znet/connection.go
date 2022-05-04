@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 )
 
 type Connection struct {
@@ -30,17 +31,25 @@ type Connection struct {
 
 	// 无缓冲管道，用于读、写Goroutine之间通信
 	msgChan chan []byte
+
+	// 连接属性集合
+	property map[string]interface{}
+
+	// 连接属性集合锁
+	propertyLock sync.RWMutex
 }
 
 func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msgHandler ziface.IMsgHandler) *Connection {
 	c := &Connection{
-		TCPServer:  server,
-		Conn:       conn,
-		ConnID:     connID,
-		isClosed:   false,
-		MsgHandler: msgHandler,
-		ExitChan:   make(chan bool, 1),
-		msgChan:    make(chan []byte),
+		TCPServer:    server,
+		Conn:         conn,
+		ConnID:       connID,
+		isClosed:     false,
+		MsgHandler:   msgHandler,
+		ExitChan:     make(chan bool, 1),
+		msgChan:      make(chan []byte),
+		property:     make(map[string]interface{}),
+		propertyLock: sync.RWMutex{},
 	}
 
 	// 将conn加入到ConnManager中
@@ -156,6 +165,9 @@ func (c *Connection) Start() {
 	go c.StartReader()
 	// 启动从当前连接写数据的业务
 	go c.StartWriter()
+
+	// 按照开发者传递进来的 创建连接之后需要调用的业务，执行对应Hook函数
+	c.TCPServer.CallOnConnStart(c)
 }
 
 func (c *Connection) Stop() {
@@ -165,6 +177,9 @@ func (c *Connection) Stop() {
 		return
 	}
 	c.isClosed = true
+
+	// 调用开发者注册的 在销毁连接前 需要执行的Hook函数
+	c.TCPServer.CallOnConnStop(c)
 
 	if err := c.Conn.Close(); err != nil {
 		return
@@ -190,4 +205,29 @@ func (c *Connection) GetConnID() uint32 {
 
 func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
+}
+
+func (c *Connection) SetProperty(key string, value interface{}) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	c.property[key] = value
+}
+
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.propertyLock.RLock()
+	defer c.propertyLock.RUnlock()
+
+	if value, ok := c.property[key]; ok {
+		return value, nil
+	} else {
+		return nil, errors.New("no such property")
+	}
+}
+
+func (c *Connection) RemoveProperty(key string) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	delete(c.property, key)
 }

@@ -52,7 +52,7 @@ func init() {
 		Host:             "0.0.0.0",
 		TCPPort:          8999,
 		Name:             "HzinxServerAPP",
-		Version:          "V0.9",
+		Version:          "V0.10",
 		MaxConn:          1000,
 		MaxPackageSize:   4096,
 		WorkerPoolSize:   10,

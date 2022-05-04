@@ -1,0 +1,7 @@
+{
+  "Name": "HzinxV0.10 demoServerApp",
+  "Host": "127.0.0.1",
+  "TCPPort": 8999,
+  "MaxConn": 3,
+  "WorkerPoolSize": 10
+}

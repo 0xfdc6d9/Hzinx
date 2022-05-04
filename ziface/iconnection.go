@@ -20,7 +20,13 @@ type IConnection interface {
 
 	// SendMsg 提供一个SendMsg方法将我们要发送给客户端的数据，先进行封包，再发送
 	SendMsg(msgID uint32, data []byte) error
-}
 
-// HandleFunc 定义一个处理连接业务的方法
-type HandleFunc func(*net.TCPConn, []byte, int) error
+	// SetProperty 设置连接属性
+	SetProperty(key string, value interface{})
+
+	// GetProperty 获取连接属性
+	GetProperty(key string) (interface{}, error)
+
+	// RemoveProperty 移除连接属性
+	RemoveProperty(key string)
+}

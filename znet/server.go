@@ -8,12 +8,14 @@ import (
 )
 
 type Server struct {
-	Name       string              // 服务器的名称
-	IPVersion  string              // 服务器绑定的IP版本
-	IP         string              // 服务器监听的IP
-	Port       int                 // 服务器监听的Port
-	MsgHandler ziface.IMsgHandler  // 消息管理模块
-	ConnMgr    ziface.IConnManager // 连接管理模块
+	Name        string                        // 服务器的名称
+	IPVersion   string                        // 服务器绑定的IP版本
+	IP          string                        // 服务器监听的IP
+	Port        int                           // 服务器监听的Port
+	MsgHandler  ziface.IMsgHandler            // 消息管理模块
+	ConnMgr     ziface.IConnManager           // 连接管理模块
+	OnConnStart func(conn ziface.IConnection) // 连接创建之后自动调用的Hook函数
+	OnConnStop  func(conn ziface.IConnection) // 连接销毁之前自动调用的Hook函数
 }
 
 func (s *Server) Start() {
@@ -104,4 +106,30 @@ func NewServer(name string) ziface.IServer {
 	}
 
 	return s
+}
+
+// SetOnConnStart 注册OnConnStart钩子函数的方法
+func (s *Server) SetOnConnStart(f func(conn ziface.IConnection)) {
+	s.OnConnStart = f
+}
+
+// SetOnConnStop 注册OnConnStop钩子函数的方法
+func (s *Server) SetOnConnStop(f func(conn ziface.IConnection)) {
+	s.OnConnStop = f
+}
+
+// CallOnConnStart 调用OnConnStart钩子函数的方法
+func (s *Server) CallOnConnStart(conn ziface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Println("=====> call OnConnStart()...")
+		s.OnConnStart(conn)
+	}
+}
+
+// CallOnConnStop 调用OnConnStop钩子函数的方法
+func (s *Server) CallOnConnStop(conn ziface.IConnection) {
+	if s.OnConnStop != nil {
+		fmt.Println("=====> call OnConnStop()...")
+		s.OnConnStop(conn)
+	}
 }
