@@ -1,0 +1,7 @@
+{
+  "Name": "MMO Game Hzinx",
+  "Host": "0.0.0.0",
+  "TCPPort": 8999,
+  "MaxConn": 300,
+  "WorkerPoolSize": 10
+}
